@@ -77,6 +77,7 @@ test("MLX profiles persist independently, fail closed on format changes and isol
   p.mlxPython = "/venv/bin/python";
   const launch = mlxLaunch(p, "darwin", "arm64");
   assert.ok(launch.args.includes("mlx_vlm.server"));
+  assert.equal(launch.args[launch.args.indexOf("--prefill-step-size") + 1], "256");
   for (const flag of [
     "--alias",
     "--fit",
@@ -101,7 +102,11 @@ test("MLX profiles persist independently, fail closed on format changes and isol
   assert.equal(env.PATH, "/bin");
   assert.throws(() => launchArgs(p), /own launcher/);
   assert.throws(() => validateProfile({ ...p, backend: "unknown" }), /backend/);
-  assert.throws(() => validateProfile({ ...p, context: 4096 }), /context caps/);
+  assert.equal(
+    validateProfile({ ...p, context: 4096, maxTokens: 512 }).context,
+    4096,
+  );
+  assert.throws(() => validateProfile({ ...p, context: 262145 }), /context/);
   assert.throws(
     () => mlxLaunch({ ...p, kvK: "q8_0" }, "darwin", "arm64"),
     /KV precision/,
@@ -120,9 +125,10 @@ test("MLX profiles persist independently, fail closed on format changes and isol
     id_slot: 0,
   };
   applySampling(body, p);
-  assert.equal(body.model, path);
+  assert.equal(body.model, p.modelPath);
   assert.equal(body.repetition_penalty, 1.1);
   assert.equal(body.enable_thinking, true);
+  assert.deepEqual(body.context_management, []);
   assert.equal(body.repeat_penalty, undefined);
   assert.equal(body.id_slot, undefined);
   assert.equal(body.cache_prompt, undefined);
@@ -183,6 +189,8 @@ else http.createServer((req, res) => {
   for (const suffix of ["", "slow", "wrong"])
     await writeFile(executable + suffix, source, { mode: 0o700 });
   p.mlxPython = executable;
+  p.context = 4096;
+  p.maxTokens = 512;
   await runtime.save(p);
   runtime.ensureEngine = () => {
     throw Error("Must not install llama.cpp for MLX");
@@ -226,10 +234,10 @@ test("Python preflight rejects old/prerelease MLX and nonnative interpreters wit
   }
   const { root } = await snapshot(t);
   for (const [version, arch, success] of [
-    ["0.7.11", "arm64", true],
-    ["0.7.10", "arm64", false],
+    ["0.7.12", "arm64", true],
+    ["0.7.11", "arm64", false],
     ["0.7.12rc1", "arm64", false],
-    ["0.7.11", "x86_64", false],
+    ["0.7.12", "x86_64", false],
   ]) {
     const shim = join(root, "python-" + version + arch);
     await writeFile(

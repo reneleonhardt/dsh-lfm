@@ -279,7 +279,10 @@ window.__ModuleLoader__.load({
           },
         });
       else if (draft) {
-        const contexts = [];
+        const contexts =
+          draft.backend === "mlx-vlm"
+            ? [4096, 8192, 16384].filter((n) => n < draft.nativeContext)
+            : [];
         for (let n = 32768; n < draft.nativeContext; n += 32768)
           contexts.push(n);
         contexts.push(draft.nativeContext);
@@ -314,7 +317,7 @@ window.__ModuleLoader__.load({
             h(
               "p",
               null,
-              "Experimental MLX-VLM text backend. Apple Silicon validation pending. Context is the checkpoint limit; memory fitting and llama.cpp tuning are unavailable.",
+              "Experimental MLX-VLM text backend for Apple Silicon. Context caps include prompt and output tokens. Memory fitting and llama.cpp tuning are unavailable.",
             ),
           field(
             "Context",
@@ -322,7 +325,6 @@ window.__ModuleLoader__.load({
               "select",
               {
                 "aria-label": "Context",
-                disabled: draft.backend === "mlx-vlm",
                 value: draft.context,
                 onChange: (e) => {
                   const context = Number(e.target.value);
@@ -391,7 +393,7 @@ window.__ModuleLoader__.load({
               "p",
               null,
               draft.backend === "mlx-vlm"
-                ? "Install mlx-vlm >= 0.7.11 in a native arm64 virtualenv and set its Python path below."
+                ? "Install mlx-vlm >= 0.7.12 in a native arm64 virtualenv and set its Python path below."
                 : "Native memory fitting preserves your selected context and KV precision. Benchmark measures the result; it does not search tuning presets.",
             ),
             h(

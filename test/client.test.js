@@ -198,10 +198,16 @@ test("real settings UI selects files, saves names/KV/context, and prompts for mi
   assert.equal(loaded.length, 2); // Interpreter setup precedes first load.
   assert.match(document.body.textContent, /Experimental MLX/);
   assert.ok(document.querySelector('input[aria-label="MLX Python"]'));
-  assert.equal(
-    document.querySelector('select[aria-label="Context"]').disabled,
-    true,
-  );
+  const mlxContext = document.querySelector('select[aria-label="Context"]');
+  assert.equal(mlxContext.disabled, false);
+  await React.act(async () => {
+    mlxContext.value = "4096";
+    mlxContext.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await tick();
+  });
+  await click("Save and load");
+  assert.equal(runtime.profiles[2].context, 4096);
+  assert.equal(runtime.profiles[2].maxTokens, 4096);
   assert.equal(
     document.querySelector('select[aria-label="K cache precision"]'),
     null,

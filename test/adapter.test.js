@@ -191,7 +191,7 @@ test("MLX wire maps model identity/sampling, decodes streamed tools and releases
     model: "LFM3-1.7B",
     path: "/local/snapshot",
     vision: false,
-    nativeContext: 262144,
+    nativeContext: 4096,
   });
   p.port = server.address().port;
   let released = 0;
@@ -239,6 +239,8 @@ test("MLX wire maps model identity/sampling, decodes streamed tools and releases
   assert.equal(bodies[0].model, p.modelPath);
   assert.equal(bodies[0].repetition_penalty, 1.1);
   assert.equal(bodies[0].enable_thinking, false);
+  assert.equal(bodies[0].max_completion_tokens, 32);
+  assert.deepEqual(bodies[0].context_management, []);
   for (const key of [
     "repeat_penalty",
     "cache_prompt",
@@ -264,8 +266,10 @@ test("MLX wire maps model identity/sampling, decodes streamed tools and releases
   // A cancelled stream must not keep the per-profile gate locked.
   for await (const _ of adapter.stream({
     ...options,
+    maxTokens: undefined,
     signal: AbortSignal.timeout(3000),
   })) {
   }
   assert.equal(released, 3);
+  assert.equal(bodies[2].max_completion_tokens, p.maxTokens);
 });
