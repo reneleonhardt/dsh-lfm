@@ -1,14 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, writeFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { verifyEngine, installEngine } from "../lib/engine-install.js";
 
-test("installed runtime reuse verifies files and detects corruption", async (t) => {
-  const root = await mkdtemp(join(tmpdir(), "lfm-engine-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
+test("installed runtime reuse through a symlink verifies files and detects corruption", async (t) => {
+  const dir = await mkdtemp(join(tmpdir(), "lfm-engine-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const root = join(dir, "linked");
+  await symlink(dir, root, "junction");
   const target = join(root, "engine", "b11960-cpu");
   await mkdir(target, { recursive: true });
   await writeFile(join(target, "lfm-server"), "fixture");
@@ -36,6 +38,10 @@ test("installed runtime reuse verifies files and detects corruption", async (t) 
   );
   await writeFile(join(target, "lfm-server"), "changed");
   await assert.rejects(verifyEngine(target, "b11960-cpu"), /checksum/);
+  await rm(join(target, "lfm-server"));
+  await writeFile(join(dir, "outside"), "fixture");
+  await symlink(join(dir, "outside"), join(target, "lfm-server"));
+  await assert.rejects(verifyEngine(target, "b11960-cpu"), /Unsafe runtime path/);
 });
 test("bad downloads fail verification, staging is removed, and retry can start", async (t) => {
   const root = await mkdtemp(join(tmpdir(), "lfm-engine-bad-"));
