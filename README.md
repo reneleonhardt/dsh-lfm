@@ -45,4 +45,4 @@ See [validation notes](docs/validation.md) for the tested hardware, measurements
 
 ## Experimental Apple Silicon MLX prototype
 
-Native quantized LFM3-1.7B text snapshots can optionally use MLX-VLM instead of llama.cpp. This path requires a separately installed native arm64 Python environment and has not been validated on Apple Silicon. Existing GGUF profiles continue to use llama.cpp. See [MLX compatibility findings, setup and hardware validation](docs/MLX.md).
+Native quantized LFM3-1.7B text snapshots can optionally use MLX-VLM instead of llama.cpp. This path requires a native arm64 Python environment with mlx-vlm >= 0.7.12. The official 4-bit checkpoint passed text, Thinking, cancellation and tool-round-trip smoke tests on Apple Silicon. MLX supports smaller context caps and processes prompts in steps of up to 256 tokens. Existing GGUF profiles continue to use llama.cpp. See [MLX setup, cached-model reproduction and validation](docs/MLX.md).
